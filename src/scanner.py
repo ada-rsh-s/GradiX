@@ -1,32 +1,41 @@
 import google.generativeai as genai
 import os
-import glob
+from dotenv import load_dotenv
+from PIL import Image
 
-API_KEY = 'AIzaSyDM9n_0ZTWWtlL0GX800mm59nw6Ee5TX8w'
+# Load environment variables
+load_dotenv()
+
+API_KEY = os.getenv("API_KEY")
+MODEL_NAME = os.getenv("MODEL_NAME")
+
+# Check API key and model name
 if not API_KEY:
-    raise ValueError("GEMINI_AI_API_KEY not available.")
+    raise ValueError("❌ API_KEY not found in environment variables. Please check your .env file.")
+if not MODEL_NAME:
+    raise ValueError("❌ MODEL_NAME not found in environment variables. Please check your .env file.")
+
+# Configure the API
 genai.configure(api_key=API_KEY)
 
-IMAGE_FOLDER = "answers"
+def extract_text_from_image(image_path, prompt):
+    """Extract text from the image."""
+    try:
+        model = genai.GenerativeModel(model_name=MODEL_NAME)
+        print(f"🔍 Extracting text from {os.path.basename(image_path)}...")
 
+        # Load image and send to the model
+        image = Image.open(image_path)
+        response = model.generate_content([image, prompt])
 
-def prep_image(image_path):
-    """Uploads an image to Gemini AI and returns the file reference."""
-    sample_file = genai.upload_file(
-        path=image_path, display_name=os.path.basename(image_path))
-    return sample_file
-
-
-def extract_text_from_image(image_file, prompt):
-    """Uses Gemini AI to extract text from an image."""
-    model = genai.GenerativeModel(model_name="gemini-2.0-flash")
-    response = model.generate_content([image_file, prompt])
-    return response.text
-
+        return response.text if response else None
+    except Exception as e:
+        print(f"❌ Error extracting text: {e}")
+        return None
 
 def process_image(image_path):
-    """Processes a single image and returns the extracted text."""
-    sample_file = prep_image(image_path)
-    text = extract_text_from_image(
-        sample_file, "Extract the text in the image verbatim and correct any spelling mistakes if needed")
-    return text
+    """Process a single image and return the extracted text."""
+    return extract_text_from_image(
+        image_path, 
+        "Extract the text in the image verbatim and correct any spelling mistakes if needed."
+    )
